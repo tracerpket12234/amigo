@@ -1,0 +1,320 @@
+## MSEI-021 (P): Introduction to Information Security (10 AM - 1 PM)
+
+### CONFIRMED PYQs (all 3 sittings)
+
+| Sitting | Q1 | Q2 | Q3 |
+|---|---|---|---|
+| Jun 2023 | HTTP POST sniffing | LAN scan, 10 machines | DDoS + firewall |
+| Dec 2024 | OS security filters | ARP sniffing + report | 10 security policies |
+| Jun 2025 | Firewall: block an IP | Web server + SSL/TLS | OpenVPN setup |
+
+**Pattern = rotation. Sniffing (2x) and firewall (2x) repeat most → prep those 4 variants first, then OS filters + SSL. OpenVPN is heavy; you only need 2 of 3.**
+
+---
+
+### Q: Packet Sniffing, HTTP POST (Jun 2023) - TOP PRIORITY
+**Tool: Wireshark** (free, already installed in most labs)
+
+**Step-by-step:**
+1. Open Wireshark → Select your network interface (Ethernet/WiFi) → Click "Start"
+2. In filter bar type: `http.request.method == POST` → Press Enter
+3. Open browser → Go to any **HTTP** (not HTTPS) login page (use http://testhtml.vulnweb.com)
+4. Enter fake username: `admin` and password: `password123` → Click Login
+5. Go back to Wireshark → You'll see the POST request highlighted
+6. Right-click on it → **"Follow" → "TCP Stream"**
+7. You'll see the plaintext username and password in the stream
+8. **Take screenshots** at each step
+
+**Viva answers:**
+- "This works on HTTP because data is sent in plaintext"
+- "This would NOT work on HTTPS because TLS encrypts the payload"
+- "Tools like this are used for network troubleshooting and security auditing"
+
+---
+
+### Q: ARP Sniffing + MAC Report (Dec 2024) - TOP PRIORITY
+**Tool: Wireshark** + Word for the report
+
+1. Start capture on active interface → filter: `arp`
+2. Force traffic: admin cmd → `arp -d *` then `ping 192.168.1.1` (your gateway)
+3. Capture 10+ packets ("Who has X? Tell Y" = broadcasts)
+4. Report table in Word: Time | Source MAC | Source IP | Dest MAC (broadcast = `ff:ff:ff:ff:ff:ff`) | Request/Reply
+5. `arp -a` shows your ARP table → paste as supporting evidence. Screenshot, save as .doc
+
+**Viva:** ARP resolves IP→MAC at Layer 2. Requests broadcast, replies unicast. No authentication → ARP spoofing = basis of MITM. Defence: static ARP entries, Dynamic ARP Inspection.
+
+---
+
+### Q: LAN Topology & Network Scan (Jun 2023)
+**Tool: Nmap** (free, pre-installed in Kali Linux)
+
+**Step-by-step:**
+1. Open terminal
+2. Find your network range: `ip addr` (note your IP, e.g., 192.168.1.5)
+3. **Scan for all devices:** `nmap -sn 192.168.1.0/24`
+   - This shows all live hosts with IP and MAC addresses
+4. **Detailed scan of each host:** `nmap -O -sV <target-IP>`
+   - Shows: OS, open ports, services running, hostname
+5. **For at least 10 machines** - scan each one individually
+6. **Create a report table:**
+
+| # | IP Address | MAC Address | Hostname | OS | Open Ports |
+|---|-----------|-------------|----------|----|------------|
+| 1 | 192.168.1.1 | AA:BB:CC:... | router | Linux | 80, 443 |
+| 2 | 192.168.1.5 | DD:EE:FF:... | lab-pc1 | Windows 10 | 22, 80 |
+
+**If you don't have 10 machines:** Scan your home network + run VMs in VirtualBox (host-only network). Screenshot everything.
+
+**Viva answers:**
+- "Topology: Star topology (most common in LANs, all devices connect to a central switch)"
+- "nmap uses ICMP echo requests for host discovery and TCP SYN scans for port detection"
+
+---
+
+### Q: Firewall Rule - Block a Specific IP (Jun 2025) - TOP PRIORITY
+**Tool: Windows Defender Firewall (built-in)**
+
+1. Admin cmd:
+   `netsh advfirewall firewall add rule name="Block-Attacker" dir=in action=block remoteip=192.168.1.20`
+2. Verify: `netsh advfirewall firewall show rule name="Block-Attacker"`
+3. **Test from the blocked machine** (2nd PC / VM / phone hotspot): ping, browser → all fail
+4. **Test from any other machine** → works. Screenshot both.
+5. Linux version: `sudo iptables -A INPUT -s 192.168.1.20 -j DROP`
+6. Cleanup: `netsh advfirewall firewall delete rule name="Block-Attacker"`
+
+**Viva:** host-based stateful packet filter; production firewalls run default-deny.
+
+---
+
+### Q: DDoS Attack & Prevention (Jun 2023 - not repeated since, still prep)
+**Tool: hping3** (pre-installed in Kali) + iptables
+
+**⚠️ ONLY on your own machines/VMs, NEVER on real networks**
+
+**No second device?** Attack your own machine's IP (`ipconfig`) with LOIC (Windows GUI) or hping3. Add `--rand-source` to spoof many source IPs = "DDoS" from one PC. Deep dive: `MSEI-021_022_Practical_Question_Bank.md`.
+
+**Step-by-step (two VMs, or self-attack):**
+1. Attacker = Kali VM, Target = Linux VM (or your own IP)
+2. **On attacker:** `hping3 -S --flood -V <target-IP>`
+   - This sends a flood of SYN packets
+3. **On target, monitor:** `watch netstat -tn`
+   - Shows all incoming connections flooding in
+   - **Screenshot** the flood of SYN connections
+4. **Prevention using iptables:**
+   ```
+   iptables -A INPUT -s <attacker-IP> -j DROP
+   ```
+5. **Verify:** `iptables -L -n` → Shows the blocking rule
+6. **Screenshot** before (flood) and after (blocked)
+
+**Viva answers:**
+- "DDoS = Distributed Denial of Service, multiple systems flood target"
+- "DOS = single source, DDOS = multiple sources"
+- "Prevention: firewalls, rate limiting, IDS/IPS, cloud-based DDoS protection"
+
+---
+
+### Q: OS Security Filters (Dec 2024) - Windows only, no tools
+*(gpedit needs Windows Pro; registry fallback given for Home)*
+
+**(a) Display hidden files:**
+- Explorer → View → Show → Hidden items. CMD: `dir /a:h`
+
+**(b) Block software installation:**
+- `gpedit.msc` → Computer Config → Admin Templates → Windows Components → Windows Installer → **"Disable Windows Installer" = Enabled**
+- Home: `reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer" /v DisableMSI /t REG_DWORD /d 2`
+- Test: run any `.msi` → blocked. Screenshot.
+
+**(c) Block user access to a folder:**
+- Folder → Properties → Security → Edit → select user → **Deny Read** → Apply
+- CMD: `icacls "C:\Secret" /deny testuser:R`
+- Test: open as that user → "Access denied"
+
+**(d) Block Windows Registry:**
+- `gpedit.msc` → User Config → Admin Templates → System → **"Prevent access to registry editing tools" = Enabled**
+- Home: `reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableRegistryTools /t REG_DWORD /d 1`
+- Test: run `regedit` → "disabled by your administrator". Undo: set value back to 0 from admin account.
+
+**Viva:** OS hardening = least privilege + attack-surface reduction; registry control blocks malware Run-key persistence; enterprise = pushed via Group Policy.
+
+---
+
+### Q: 10 Security Policies (Dec 2024) - write-up, free marks
+
+| # | Area | Policy | Enforced via |
+|---|---|---|---|
+| 1 | OS | Min 8-char password, complexity, 90-day expiry | secpol.msc / GPO |
+| 2 | OS | Auto-updates, patch within 30 days | WSUS / Windows Update |
+| 3 | Network | Firewall default-deny inbound | Windows/perimeter FW |
+| 4 | Network | Remote access via VPN only | VPN server |
+| 5 | Browser | Never save passwords | Browser GPO |
+| 6 | Browser | Block popups + 3rd-party cookies, HTTPS-only | Browser GPO |
+| 7 | Application | Licensed/approved software only | AppLocker whitelisting |
+| 8 | Hardware | USB storage blocked for standard users | GPO |
+| 9 | Privileges | Least privilege, separate admin accounts | AD user roles |
+| 10 | Privileges | 5-min idle lock + lockout after 5 failed logins | GPO |
+
+**Viva:** policies turn intent into enforceable rules; technical enforcement (GPO) beats paper policy.
+
+---
+
+### Q: Web Server + SSL/TLS (Jun 2025)
+**Tool: XAMPP/Apache or nginx + OpenSSL**
+
+1. Self-signed cert: `openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt`
+2. nginx: server block with `listen 443 ssl;` + `ssl_certificate` / `ssl_certificate_key` paths → `sudo systemctl restart nginx`
+   (XAMPP: same cert paths in `apache/conf/extra/httpd-ssl.conf`, restart Apache)
+3. Test: `https://localhost` → browser warning (normal for self-signed) → proceed → padlock → view cert details
+4. CLI proof: `openssl s_client -connect localhost:443` shows handshake + cert chain
+
+**Viva:** "trusted source" in production = CA (Let's Encrypt free / DigiCert); lab self-signed runs the identical TLS handshake, only the trust chain differs. TLS = encryption + server authentication. Port 80 should redirect to 443.
+
+---
+
+### Q: OpenVPN Setup (Jun 2025) - heavy, skip if the other two suit you
+**Pre-stage installer + configs on USB.**
+
+1. Server (Linux): `sudo apt install openvpn easy-rsa` → `easyrsa init-pki` → `build-ca` → `gen-req server` + `sign-req server` → `gen-dh` → repeat `gen-req/sign-req` for client1
+2. `server.conf`: `port 1194`, `proto udp`, `dev tun`, `server 10.8.0.0 255.255.255.0`, ca/cert/key/dh paths → `sudo systemctl start openvpn@server`
+3. Windows client: OpenVPN GUI → import `client.ovpn` + ca.crt + client1.crt/key → Connect
+4. Verify: adapter gets `10.8.0.6` → `ping 10.8.0.1`. Screenshot.
+
+**Viva:** VPN = encrypted tunnel over untrusted network; OpenVPN uses SSL/TLS with certificate-based mutual auth; remote-access vs site-to-site.
+
+---
+
+## MSEI-022 (P): Network Security (2 PM - 5 PM)
+
+### CONFIRMED PYQs
+
+| Sitting | Q1 | Q2 | Q3 |
+|---|---|---|---|
+| Jun 2023 | MD5 + steganography | Digital signature (MAC) | Port scan + open new port |
+| Dec 2024 | Enterprise vuln scan (academic) | BCP/DR plan (power sector) | E-commerce customer security steps |
+| Jun 2025 | Vuln scan, 2 tools (airline) | QSR customer security steps | MD5 + steganography (repeat) |
+
+**Repeat logic: MD5+stego (2x) and sector vuln-scan (2x, sector swapped) are near-certain. Third slot rotates → BCP/DR + customer-procedure write-ups covered below.**
+
+---
+
+### Q: MD5 Hash + Steganography - HIGHEST PROBABILITY (repeated twice!)
+**Tools: md5sum (built-in) + OpenStego (free)**
+
+**Part A: MD5 Hash Comparison**
+1. Create a text file: `echo "Hello World" > myfile.txt`
+2. Calculate hash: `md5sum myfile.txt`
+   - Note the hash value, e.g., `b026324c6904b2a9cb4b88d6d61c81d1`
+3. Copy file to another location: `cp myfile.txt /tmp/myfile_copy.txt`
+4. Calculate hash of copy: `md5sum /tmp/myfile_copy.txt`
+5. **Both hashes should match** → File integrity verified
+6. Now modify the copy: `echo "Modified" >> /tmp/myfile_copy.txt`
+7. Calculate hash again: `md5sum /tmp/myfile_copy.txt`
+8. **Hash changed!** → Tampering detected
+
+**Part B: Steganography (hide file in image)**
+1. Install: `sudo apt install steghide` (or use OpenStego GUI)
+2. Create secret message: `echo "Secret message" > secret.txt`
+3. **Hide file in image:** `steghide embed -cf image.jpg -ef secret.txt`
+   - Enter passphrase when prompted (e.g., "mypass")
+4. **Extract the hidden file:** `steghide extract -sf image.jpg`
+   - Enter same passphrase → secret.txt is recovered
+5. `cat secret.txt` → Shows "Secret message"
+6. **Screenshot** each step
+
+**Viva answers:**
+- "MD5 produces a 128-bit hash, used for integrity checking"
+- "Steganography hides data within other files without visible change"
+- "MD5 is NOT collision-resistant, use SHA-256 for security"
+
+---
+
+### Q: Enterprise Vulnerability Scan - HIGH PROBABILITY (repeated with different sectors)
+**Tool: Nessus Essentials (free) or OWASP ZAP (simpler)**
+
+**Using OWASP ZAP (easiest):**
+1. Install OWASP ZAP (free from zaproxy.org)
+2. Open ZAP → Enter target URL (use test site: `http://testphp.vulnweb.com`)
+3. Click **"Attack" → "Active Scan"** → Start
+4. Wait for scan to complete (5-10 min)
+5. Go to **"Alerts" tab** → Shows all vulnerabilities found
+6. **Screenshot** the alerts list
+
+**Write report like this:**
+
+```
+VULNERABILITY ASSESSMENT REPORT
+Target: [Airline/Academic Institute/QSR - whatever the question says]
+
+1. SCOPE: External vulnerability scan of web application
+2. TOOL USED: OWASP ZAP v2.x
+
+3. FINDINGS:
+   +----+------------------+----------+------------------------+
+   | #  | Vulnerability    | Severity | Remediation            |
+   +----+------------------+----------+------------------------+
+   | 1  | SQL Injection    | High     | Use parameterized      |
+   |    |                  |          | queries                |
+   | 2  | XSS (Reflected)  | Medium   | Input validation +     |
+   |    |                  |          | output encoding        |
+   | 3  | Missing HTTPS    | Medium   | Enable TLS 1.2+        |
+   | 4  | Weak Passwords   | High     | Enforce password       |
+   |    |                  |          | policy                 |
+   +----+------------------+----------+------------------------+
+
+4. RISK RATING: HIGH
+5. REMEDIATION PLAN: [list fixes for each finding]
+```
+
+**For different sectors, just change the context:**
+- **Airline:** mention booking system, passenger data, PCI-DSS
+- **Academic Institute:** mention student records, admin panels
+- **QSR (Restaurant):** mention POS systems, payment data
+
+---
+
+### Q: BCP/DR Plan - Power Sector (Dec 2024) - write-up
+Use ISO 22301 structure, 4 blocks:
+1. **BIA:** critical functions (grid ops, billing), impact of outage, MTPD
+2. **RTO/RPO:** e.g. SCADA RTO 1h / RPO 15min; billing RTO 24h / RPO 4h
+3. **Recovery strategy:** hot/ warm/ cold site, data replication, backup power/UPS, manual fallback procedures
+4. **Testing + maintenance:** tabletop drills, annual review
+
+**Power-sector risks to name:** grid failure, SCADA/ICS compromise, substation physical attack, ransomware on OT network. Mitigations: network segmentation (IT/OT), redundant control centres, NDA'd vendors, incident response plan.
+
+---
+
+### Q: Customer Security Procedure - E-commerce/QSR (Dec 2024 + Jun 2025) - write-up
+Numbered steps, swap the sector name only:
+1. HTTPS/TLS 1.2+ on all pages (padlock, valid CA cert)
+2. PCI-DSS compliant payment gateway - never store card data yourself
+3. Input validation + parameterized queries (stops SQL injection/XSS)
+4. Session management: timeouts, secure+httponly cookies, MFA for accounts
+5. Regular patching of web server, CMS, plugins
+6. WAF in front of the site + rate limiting
+7. Staff least-privilege access + POS/Payment device hardening (QSR angle)
+8. Customer awareness: phishing warnings, official-domain comms only
+
+---
+
+### Q: Port Scanning - EASY
+**Tool: Nmap**
+
+1. **Full port scan:** `nmap -p- <target-IP>`
+2. Note all open ports
+3. **Open a new service:** `python3 -m http.server 8080`
+4. **Scan again:** `nmap -p- <target-IP>`
+5. **Verify:** Port 8080 should now show as "open"
+6. **Screenshot** before and after
+
+---
+
+### Q: Digital Signature using MAC
+**Tool: OpenSSL (built-in)**
+
+1. Create file: `echo "Important message" > message.txt`
+2. **Generate MAC:** `openssl dgst -sha256 -hmac "mysecretkey" message.txt`
+   - Shows: `HMAC-SHA256(message.txt)= abc123...`
+3. **Verify:** Run same command again → Same hash = message not tampered
+4. Modify file → Run again → Different hash = tampering detected
+
+**Viva:** "MAC uses symmetric key (same key for generate/verify), digital signature uses asymmetric key pair (public/private)"
