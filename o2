@@ -1,320 +1,399 @@
-BCP, DR PLANNING AND AUDIT
+j
+
+MSEI-027 (P): DIGITAL FORENSICS
 
 ---
 
-#Q1: MS PROJECT / GANTT CHART
-(Appeared every sitting. Pick this without thinking.)
+#Q1: DIGITAL FORENSIC INVESTIGATION LIFECYCLE
 
 ##Definition
-A Gantt chart is a bar chart that shows project tasks on the Y-axis and time on the X-axis. It visualises task duration, sequence, and dependencies in one view.
+The digital forensic investigation lifecycle is a structured process for identifying, preserving, collecting, examining, analysing, and presenting digital evidence in a legally admissible manner.
 
-##Steps (ProjectLibre)
-1. Open ProjectLibre. Select New Project. Name it: "Website Security Audit BCP".
-2. Set project start date (use today's date or any logical date).
-3. Enter the four tasks in the Task Name column one by one.
-4. Enter duration for each task.
-5. Set predecessor for Phase 3: enter "2" in the Predecessors column (Finish-to-Start link from Phase 2).
-6. Set predecessors for Phase 1 and Phase 4 similarly (1 and 3).
-7. Assign resources: View > Resources > add names > assign to each task.
-8. The Gantt chart auto-renders on the right panel.
-9. Switch to Resource Usage view to show Phase 2 and Phase 3 resources with timeline (the question specifically asks for this).
-10. Save the file.
+##The 6 Steps
 
-##Task Table
+1. IDENTIFICATION
+- Determine what devices or systems may contain evidence.
+- Define the scope: which machines, what time range, what data types.
+- Money laundering case examples: bank servers, employee laptops, email servers, transaction databases, USB drives found at the scene.
+- Do not touch anything yet.
 
-| | Task Name | Duration | Predecessor | Resource |
-|---|---|---|---|---|
-| 1 | Phase 1: Planning and Scoping | 5 days | None | Project Manager |
-| 2 | Phase 2: Vulnerability Scanning | 10 days | Phase 1 (FS) | Security Auditor |
-| 3 | Phase 3: Reporting and Remediation | 7 days | Phase 2 (FS) | Auditor, Developer |
-| 4 | Phase 4: Re-verification | 3 days | Phase 3 (FS) | Security Auditor |
+2. PRESERVATION
+- Secure the scene. Restrict access.
+- Do NOT power off running systems. Volatile memory (RAM) contains running processes, encryption keys, and active network connections. Power off destroys all of this.
+- Photograph all devices before touching them. Document: device state (on/off), what is on screen, cables connected.
+- Establish chain of custody from this point onward.
 
-FS = Finish-to-Start. Phase 3 cannot start until Phase 2 is fully complete. This is the explicit dependency the Dec 2024 question asks for.
+3. COLLECTION
+- Attach a write-blocker to every storage device before connecting it to the forensic workstation.
+- Create a forensic image (bit-by-bit copy of the entire drive including deleted space and slack space).
+- Hash the image immediately after creation.
+- Work only on the image copy. Never on the original evidence.
 
-Total project duration: 25 days (all tasks sequential, no overlap.)
+```bash
+Create forensic image
+dd if=/dev/sda of=/mnt/external/image.dd bs=4M
 
-##Gantt Chart Sketch (draw this on paper)
-
-```
-Task                          | Wk1   | Wk2        | Wk3     | Wk4   |
-------------------------------|-------|------------|---------|-------|
-Phase 1: Planning (5d)        | ####|            |         |       |
-Phase 2: Vuln Scan (10d)      |       | #########|         |       |
-Phase 3: Reporting (7d)       |       |            | ######|       |
-Phase 4: Re-verify (3d)       |       |            |         | ##  |
+Hash the original drive and the image (both must match)
+md5sum /dev/sda
+md5sum /mnt/external/image.dd
+sha256sum /mnt/external/image.dd > /mnt/external/image.dd.sha256
 ```
 
-##BCM Lifecycle Variant (Jun 2025 question)
-If the question says "BCM lifecycle" instead of "website auditing BCP", use these 6 phases:
+4. EXAMINATION
+- Mount the forensic image read-only.
+- Tools: Autopsy, FTK, EnCase.
+- Actions: recover deleted files using file carving, keyword search, examine metadata, analyse browser history and email.
+- Money laundering: search for financial terms ("wire transfer", "offshore", account numbers).
 
-| | Phase | Duration | Predecessor | Resource |
-|---|---|---|---|---|
-| 1 | BIA (Business Impact Analysis) | 5 days | None | BCP Analyst |
-| 2 | Risk Assessment | 4 days | Phase 1 | Risk Manager |
-| 3 | Strategy Development | 5 days | Phase 2 | BCP Manager |
-| 4 | Plan Development | 7 days | Phase 3 | BCP Team |
-| 5 | Testing and Exercising | 5 days | Phase 4 | All Teams |
-| 6 | Maintenance and Review | 3 days | Phase 5 | BCP Manager |
+5. ANALYSIS
+- Correlate evidence across multiple sources.
+- Build a timeline of events.
+- Money laundering: trace transaction flow across accounts, match timestamps of financial transfers with communication records.
+- Distinguish clearly between facts (what the evidence shows) and inferences (what it suggests).
+
+6. PRESENTATION
+- Write the forensic report: case summary, methodology, tools used, findings, conclusions.
+- Attach hash values as proof of evidence integrity.
+- Format must be acceptable to the court.
+- Be prepared to testify as an expert witness and explain technical findings in plain language.
+
+##Lifecycle Diagram (draw this on paper)
+
+```
+Identification --> Preservation --> Collection --> Examination --> Analysis --> Presentation
+      |                |               |               |              |              |
+  Define scope    Secure scene    Write-block +    Recover &      Timeline &    Court report
+  List devices    No power off    Image + hash     keyword scan   correlation   + testimony
+```
 
 ##Key Concepts
-- Finish-to-Start (FS): The successor task cannot start until the predecessor finishes. This is the dependency type the question specifies.
-- Critical path: The longest chain of dependent tasks. Here, all 4 (or 6) tasks are on the critical path because all are sequential.
-- Resource levelling: Ensures no single resource is over-allocated across parallel tasks. Not relevant here since tasks do not overlap.
-- Milestone: A task with zero duration that marks a significant point (e.g., "Audit Sign-Off").
+- Chain of custody: Continuous log of who handled each piece of evidence, when, and why. Any gap can make evidence inadmissible.
+- Write-blocker: Prevents any write operation to the original drive. Mandatory before any connection.
+- Bit-by-bit image vs file copy: Forensic image copies every sector including deleted space and slack space. File copy only copies existing files.
+- Admissibility: Evidence must be collected using accepted forensic methods and documented to be accepted in court.
 
 ##Viva
-- Q: What is the critical path here? A: All phases form the critical path. Any delay in any phase delays the project end date by the same amount.
-- Q: Why use ProjectLibre and not MS Project? A: ProjectLibre is open-source, free, and has identical Gantt functionality.
-- Q: What does a Gantt chart NOT show? A: Resource costs, risk levels, or task priority. Use a WBS for task breakdown and a risk register for risks.
-- Q: What is the difference between a BCP and a project plan? A: A project plan is time-bound with a defined end date. A BCP is a permanent operational document that is tested and updated on a recurring cycle.
-- Q: What is the difference between the 4-phase audit Gantt and the 6-phase BCM lifecycle? A: The audit Gantt is a one-time project plan for conducting a security audit. The BCM lifecycle is a continuous management cycle under ISO 22301 that repeats indefinitely.
+- Q: Why not power off a running system immediately? A: RAM is volatile. It contains encryption keys, running processes, and network connections that are permanently lost on power off. Capture RAM first using tools like Magnet RAM Capture or WinPmem.
+- Q: What happens if chain of custody is broken? A: Defence counsel can challenge the authenticity of the evidence. A judge may rule it inadmissible.
+- Q: What is the difference between examination and analysis? A: Examination is finding what is in the evidence (the raw data). Analysis is interpreting what that data means in the context of the case.
 
 ---
 
-#Q2: VULNERABILITY ASSESSMENT OF 2 COMPUTERS ON LAN
+#Q2: FILE CARVING / RECOVER DELETED DATA
 
 ##Definition
-Vulnerability assessment is a systematic process of identifying, classifying, and prioritising security weaknesses in systems before an attacker exploits them.
+File carving is the process of recovering files from raw disk data by searching for known file header and footer byte signatures, without relying on file system metadata that may have been deleted or corrupted.
 
-##Steps (Nessus Essentials)
-1. Install Nessus Essentials (free, up to 16 IPs). Register at tenable.com for activation code.
-2. Open browser, go to `https://localhost:8834`. Log in.
-3. Click New Scan > Basic Network Scan.
-4. Name: "Scan - Computer 1". Enter IP of Computer 1 (e.g., 192.168.1.10). Save, then Launch.
-5. Wait for scan to complete (5 to 15 minutes).
-6. Open results. Note findings under each severity: Critical, High, Medium, Low, Info.
-7. Repeat for Computer 2 (e.g., 192.168.1.20).
-8. Build the comparison table below.
-
-##Commands (OpenVAS alternative)
-```bash
-Start OpenVAS
-sudo gvm-start
-
-Access at: https://localhost:9392
-Create new target for each IP
-Run "Full and Fast" scan on each
-Download PDF report for each
-```
-
-##Comparison Table (this is the exact structure the Dec 2024 question asks for)
-
-| Finding | Severity | Computer 1 | Computer 2 | Common / Unique | Mitigation: C1 | Mitigation: C2 |
-|---|---|---|---|---|---|---|
-| Outdated OS | High | Yes | No | Unique to C1 | Apply Windows updates immediately | N/A |
-| SMB signing disabled | High | Yes | Yes | Common | Enable via GPO | Enable via GPO |
-| Open Port 22 (SSH) | Medium | No | Yes | Unique to C2 | N/A | Disable SSH or restrict to admin IP |
-| Weak admin password | Critical | Yes | No | Unique to C1 | Enforce complexity policy, reset now | N/A |
-| Missing antivirus | Medium | No | Yes | Unique to C2 | N/A | Install and enable AV immediately |
-| RDP exposed (Port 3389) | High | Yes | Yes | Common | Restrict to VPN only | Restrict to VPN only |
-
-Common findings (both machines): SMB signing disabled, RDP exposed. Fix these first as they affect the entire LAN.
-Unique to C1: Outdated OS, weak admin password. Higher combined risk.
-Unique to C2: Open SSH, missing AV. Medium priority but SSH + no AV is a dangerous combination.
-
-##Key Concepts
-- CVSS score: Common Vulnerability Scoring System. 0 to 10. Above 9.0 = Critical.
-- False positive: A finding reported by the tool that is not actually a vulnerability. Always verify manually before remediating.
-- Authenticated vs unauthenticated scan: Authenticated scans use credentials and find patch-level and configuration issues. Unauthenticated scans only see what an external attacker sees.
-- Common finding significance: A vulnerability found on multiple machines usually indicates a systemic issue (bad baseline image, missing GPO) not just an individual machine problem.
-
-##Viva
-- Q: What is the difference between vulnerability assessment and penetration testing? A: VA identifies and lists vulnerabilities. Pentest actively exploits them to prove impact. VA is broader; pentest is deeper on specific targets.
-- Q: Why prioritise common findings over unique ones? A: Common findings indicate a policy or configuration failure that affects the whole network, not just one machine.
-- Q: What do you do after finding a Critical vulnerability? A: Prioritise for immediate remediation. Raise it in the risk register. Retest after the fix to confirm it is closed.
-
----
-
-#Q3: SYSTEM HARDENING TASKS
-
-##Definition
-System hardening is the process of reducing a system's attack surface by disabling unnecessary features, enforcing access controls, and applying security configurations.
-
-##Steps and Commands
-
-(a) Block Ethernet Interface
-```bash
-Linux
-sudo ifconfig eth0 down
-
-Verify
-ip addr show eth0
-State should show DOWN
-
-Windows (Admin CMD)
-netsh interface set interface "Ethernet" disable
-```
-
-(b) Configure Firewall
-```bash
-Linux: Allow port 80 and 443, block all other inbound
-sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
-sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
-sudo iptables -A INPUT -j DROP
-
-Verify rules are in place
-sudo iptables -L -n
-
-Windows (Admin CMD)
-netsh advfirewall set allprofiles firewallpolicy blockinbound,allowoutbound
-netsh advfirewall firewall add rule name="Allow-HTTP" dir=in action=allow protocol=tcp localport=80
-netsh advfirewall firewall add rule name="Allow-HTTPS" dir=in action=allow protocol=tcp localport=443
-```
-
-(c) Disable USB Storage
-```bash
-Linux
-echo 'blacklist usb-storage' | sudo tee /etc/modprobe.d/usb-block.conf
-sudo modprobe -r usb-storage
-
-Verify
-lsmod | grep usb_storage
-Should return nothing if disabled
-
-Windows (Registry - Admin CMD)
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\USBSTOR" /v Start /t REG_DWORD /d 4 /f
-4 = Disabled. 3 = Enabled (to re-enable, set back to 3).
-```
-
-(d) Disable CD-ROM
-```bash
-Linux: blacklist the optical drive kernel module
-echo 'blacklist cdrom' | sudo tee /etc/modprobe.d/cdrom-block.conf
-echo 'blacklist sr_mod' | sudo tee -a /etc/modprobe.d/cdrom-block.conf
-sudo modprobe -r cdrom sr_mod
-
-Verify
-lsmod | grep cdrom
-Should return nothing
-
-Windows: disable via Device Manager
-Device Manager > DVD/CD-ROM drives > right-click > Disable device
-OR via registry:
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\cdrom" /v Start /t REG_DWORD /d 4 /f
-```
-
-(e) Enable Login Authorisation (Password Policy + Lockout)
-```bash
-Linux: Set 90-day password expiry
-sudo passwd -x 90 username
-sudo passwd -n 7 username     minimum days before user can change again
-sudo passwd -w 14 username    warn user 14 days before expiry
-
-Account lockout after 5 failed attempts (edit PAM config)
-sudo nano /etc/pam.d/common-auth
-Add this line at the top of the file:
-auth required pam_tally2.so onerr=fail deny=5 unlock_time=300
-
-Windows (Admin CMD)
-net accounts /maxpwage:90 /minpwlen:8 /lockoutthreshold:5 /lockoutduration:5
-
-Windows: enable via secpol.msc
-Security Settings > Account Policies > Password Policy
-Security Settings > Account Policies > Account Lockout Policy
-```
-
-##Final Report (the Jun 2025 question explicitly asks for this)
-
-Write this as a summary table after completing all tasks:
-
-| | Task | Action Taken | Tool/Command Used | Status |
-|---|---|---|---|---|
-| 1 | Block Ethernet | Disabled eth0 / Ethernet adapter | ifconfig / netsh | Done |
-| 2 | Configure Firewall | Allow 80, 443 inbound; block all else | iptables / netsh advfirewall | Done |
-| 3 | Disable USB | Blacklisted usb-storage module | modprobe / registry | Done |
-| 4 | Disable CD-ROM | Blacklisted cdrom and sr_mod | modprobe / registry | Done |
-| 5 | Login authorisation | 90-day expiry, lockout after 5 fails | passwd / net accounts | Done |
-
-Report conclusion line to write: "All five hardening tasks have been applied. The system's attack surface has been reduced by eliminating external storage vectors, restricting network access to defined ports only, and enforcing authentication controls."
-
-##Key Concepts
-- Least privilege: Users get only the access they need. Nothing more.
-- Attack surface reduction: Disabling unused services, ports, and interfaces removes entry points for attackers.
-- CIS Benchmarks: Published hardening guides for every major OS. Used as the industry baseline for what to disable and what to enforce.
-- Blacklisting a kernel module: Prevents Linux from loading a driver at boot. The hardware is physically present but the OS cannot communicate with it.
-
-##Viva
-- Q: Why disable USB storage specifically? A: USB devices are a common vector for data exfiltration and malware introduction (BadUSB attacks). Disabling the driver blocks these even if the port is physically accessible.
-- Q: Why blacklist cdrom separately from USB? A: They use different kernel modules. Disabling USB storage does not affect optical drives because they are controlled by the cdrom/sr_mod module.
-- Q: What is the risk of a default-deny firewall rule without testing? A: Legitimate services can be blocked. Always test in a staging environment before applying to production.
-
----
-
-#Q4: LOG ANALYSIS AND AUDIT REPORT
-
-##Definition
-Log analysis is the process of reviewing system and application logs to identify security events, attacker behaviour, and anomalies.
-
-##Steps
-1. Locate Apache access log: `/var/log/apache2/access.log`
-2. Each line contains: source IP, timestamp, HTTP method, URL, status code, bytes transferred.
-3. Extract and count IPs to find the top 2 most-accessed.
-4. Run Nmap to list open ports on the web server.
-5. Identify countermeasures for each finding.
-6. Export the audit report in HTML or XML format.
+##Steps (Foremost)
+1. Acquire a forensic image of the disk with dd.
+2. Verify the image hash before starting work.
+3. Run Foremost against the image. It scans for known file signatures.
+4. Foremost writes recovered files into an output directory sorted by file type (jpg/, pdf/, doc/, etc.).
+5. Open recovered files and check metadata for case-relevant information.
 
 ##Commands
 ```bash
-Find top 2 most-accessed IP addresses
-awk '{print $1}' /var/log/apache2/access.log | sort | uniq -c | sort -rn | head -2
+Install Foremost
+sudo apt install foremost
 
-Sample output:
-523  192.168.1.45
-310  10.0.0.12
+Create disk image
+dd if=/dev/sda of=/home/examiner/disk_image.dd bs=4M
 
-List open ports on the web server
-nmap localhost
-or specify the server IP
-nmap 192.168.1.100
+Verify image integrity before carving
+md5sum /home/examiner/disk_image.dd
 
-Export audit report
-nmap -oX audit_report.xml localhost       XML format
-nmap -oH audit_report.html localhost      HTML format
-nmap -oN audit_report.txt localhost       Plain text
-nmap -oA audit_report localhost           All three formats at once
+Run file carving
+foremost -i /home/examiner/disk_image.dd -o /home/examiner/recovered_files/
 
-Additional log analysis commands
-Count total unique IPs
-awk '{print $1}' /var/log/apache2/access.log | sort -u | wc -l
+View what was recovered, sorted by type
+ls -la /home/examiner/recovered_files/
 
-Find all 404 errors (file not found - possible scanning activity)
-grep " 404 " /var/log/apache2/access.log | awk '{print $1}' | sort | uniq -c | sort -rn
+Read the audit log Foremost generates
+cat /home/examiner/recovered_files/audit.txt
 
-Find all POST requests (brute force or form abuse)
-grep "POST" /var/log/apache2/access.log | awk '{print $1}' | sort | uniq -c | sort -rn
+Check EXIF metadata on recovered images (counterfeit document case)
+exiftool /home/examiner/recovered_files/jpg/00000001.jpg
 ```
 
-##Sample Apache Log Line (write this on paper to show you understand the format)
+##Commands (Autopsy GUI)
 ```
-192.168.1.45 - - [29/Jul/2026:10:23:11 +0530] "GET /index.html HTTP/1.1" 200 2326
-     [1]                  [2]                        [3]               [4] [5]
-
-[1] Source IP
-[2] Timestamp
-[3] HTTP Method + URL + Protocol
-[4] Status Code (200=OK, 404=Not Found, 403=Forbidden, 500=Server Error)
-[5] Bytes transferred
+1. Open Autopsy > New Case > Enter case name and examiner name
+2. Add Data Source > Disk Image or VM File > browse to disk_image.dd
+3. Enable "File Carving" in the ingest modules list > Finish
+4. Wait for analysis to complete
+5. Go to File Views > Deleted Files in left panel
+6. Click any file to view content and metadata
+7. Right-click > Extract File to save it
 ```
 
-##Countermeasures List (the Jun 2025 question asks for this explicitly)
+##File Signature Table (memorise at least 4)
 
-| Finding | Countermeasure |
-|---|---|
-| Single IP making 500+ requests | Rate limiting (mod_evasive on Apache). Block IP in firewall if confirmed malicious. |
-| Many 404 errors from one IP | Directory scanning in progress. Block the IP. Enable IDS alert for 404 bursts. |
-| Open Port 22 (SSH) | Disable if not needed. If needed, restrict to specific admin IP, use key-based auth only. |
-| Open Port 3306 (MySQL) | Must not be exposed externally. Bind to localhost: `bind-address = 127.0.0.1` in my.cnf. |
-| Open Port 80 (HTTP) | Redirect all HTTP to HTTPS. Disable plain HTTP access. |
-| Unused open ports | Close via firewall or disable the service. |
+| File Type | Header (Hex) | Footer |
+|---|---|---|
+| JPEG image | FF D8 FF | FF D9 |
+| PDF | 25 50 44 46 (%PDF) | 25 25 45 4F 46 (%%EOF) |
+| PNG image | 89 50 4E 47 | AE 42 60 82 |
+| ZIP / DOCX / XLSX | 50 4B 03 04 | 50 4B 05 06 |
+| MP3 audio | FF FB | (no standard footer) |
+
+##For Counterfeit Document Case
+- Recover deleted image and PDF files from suspect's drive.
+- Check EXIF metadata of recovered images: tool used to create/edit (e.g., Photoshop), GPS coordinates, timestamps.
+- Look for multiple save dates on the same file (evidence of repeated editing).
+- Look for tool signatures: Photoshop leaves "Adobe Photoshop" in EXIF Creator field.
 
 ##Key Concepts
-- Status codes: 200 = OK, 301/302 = Redirect, 403 = Forbidden, 404 = Not Found, 500 = Server Error.
-- Suspicious patterns: High 404 count from one IP = directory scanning. High POST count = brute force or form abuse.
-- SIEM: Security Information and Event Management. Aggregates logs from multiple sources for real-time alerting (e.g., Splunk, IBM QRadar).
-- Log rotation: `/var/log/apache2/access.log.1` is yesterday's log. `.gz` files are older compressed logs.
+- File carving vs file recovery: Carving uses byte signatures only, ignores file system entirely. Recovery uses MFT (NTFS) or FAT entries to locate deleted files. Carving works even when the file system is damaged or wiped.
+- Slack space: Unused space between the end of a file and the end of its allocated disk cluster. Can contain remnants of previously stored data.
+- Anti-forensics: Suspects may use tools like Eraser or CCleaner to overwrite deleted files and defeat carving. Look for evidence of wiping tools in registry and logs.
 
 ##Viva
-- Q: What does a high number of 404 errors from a single IP tell you? A: Likely automated directory or file enumeration. An attacker is probing for hidden files, backup files, or admin panels.
-- Q: What is the difference between a log and an audit trail? A: A log is a raw record of system events. An audit trail is a curated, tamper-evident record used for compliance and forensics.
-- Q: Why export to XML format specifically? A: XML is machine-readable. Other tools, scripts, and SIEM platforms can parse it for further processing without manual intervention.
+- Q: What is a file signature? A: A fixed sequence of bytes at the start (and sometimes end) of a file that identifies its type. Also called a magic number. Foremost uses a config file of known signatures to search for.
+- Q: Can Foremost recover files from a formatted drive? A: Yes, if the formatting was a quick format (file system table cleared but data blocks not overwritten). Not after a secure wipe.
+- Q: What tool would you use for a mobile device image? A: Autopsy can analyse Android images. Cellebrite UFED is the commercial standard for mobile acquisition and carving.
 
+---
+
+#Q3: PASSWORD CRACKING
+
+##Definition
+Password cracking is the process of recovering a plaintext password from its stored hash by generating candidate hashes and comparing them, using automated tools and attack techniques.
+
+##Steps (John the Ripper)
+1. Obtain the password hash from the target system.
+2. Save it to a text file.
+3. Run John the Ripper with the chosen attack mode.
+4. View the cracked result.
+
+##Commands
+```bash
+Save an MD5 hash to a file (example: hash of "password")
+echo "5f4dcc3b5aa765d61d8327deb882cf99" > hash.txt
+
+Dictionary attack (fastest when the password is a real word or common variant)
+john --wordlist=/usr/share/wordlists/rockyou.txt --format=Raw-MD5 hash.txt
+
+Brute force attack (tries all character combinations, use when dictionary fails)
+john --incremental --format=Raw-MD5 hash.txt
+
+Show cracked passwords
+john --show --format=Raw-MD5 hash.txt
+
+For Linux /etc/shadow hashes
+john /etc/shadow
+
+For Windows NTLM hashes
+john --format=NT hash.txt
+
+Resume an interrupted session
+john --restore
+```
+
+##Three Attack Types
+
+| Attack Type | Method | Speed | Best Used When |
+|---|---|---|---|
+| Dictionary attack | Tries every word in a wordlist (rockyou.txt has 14M entries) | Fast | Password is a common word, name, or simple variation |
+| Rainbow table attack | Looks up precomputed hash-to-password mappings | Very fast (lookup only, no computation) | Hash is unsalted and target is in the precomputed table |
+| Brute force attack | Tries every possible character combination | Very slow | Dictionary and rainbow both failed; password length is known to be short |
+
+##Why Rainbow Tables Fail Against Salted Hashes
+- A salt is a random string added to the password before hashing.
+- `hash(password + salt)` produces a unique output per user even if two users have identical passwords.
+- Rainbow tables are precomputed for `hash(password)` only. The salt invalidates all precomputed entries.
+- Modern systems (bcrypt, scrypt, Argon2) use salting by default and are designed to be slow to compute.
+
+##Key Concepts
+- Hash: A one-way function. You cannot reverse a hash mathematically. Cracking works by generating hashes of candidates and comparing outputs.
+- rockyou.txt: A leaked real-world password list with 14 million entries. The standard dictionary for John and Hashcat.
+- GPU cracking: Hashcat uses GPU acceleration. It cracks MD5 hashes billions of times faster than John the Ripper on CPU.
+- Salting: Renders rainbow tables useless and makes dictionary attacks significantly harder.
+
+##Viva
+- Q: What is the difference between dictionary attack and brute force? A: Dictionary attack tries pre-selected words and known variations. Brute force tries every possible character combination. Dictionary is faster but fails against random passwords. Brute force is exhaustive but slow beyond 8 characters.
+- Q: Why is MD5 weak for password storage? A: MD5 is designed to be fast. A modern GPU can compute billions of MD5 hashes per second. Use bcrypt or Argon2, which are deliberately slow and include salt by design.
+- Q: Is password cracking always illegal? A: No. It is legal and necessary during authorised penetration testing, forensic investigations with a court order, and recovering your own passwords.
+
+---
+
+#Q4: SEARCH AND SEIZURE PROCEDURE
+
+##Definition
+Search and seizure in digital forensics is the legally authorised process of locating, documenting, and collecting electronic evidence without altering or contaminating it.
+
+##Steps
+
+Phase 1: Pre-Search Preparation
+- Obtain a valid search warrant specifying location, devices, and scope.
+- Assemble forensic toolkit: write-blockers, imaging drives, anti-static evidence bags, labels, camera, chain of custody forms.
+- Brief the team on scope, legal boundaries, and target evidence types.
+- Tax evasion / money laundering: brief team to look for financial spreadsheets, accounting software (Tally, QuickBooks), PDF invoices, email archives, browser history showing online banking.
+
+Phase 2: Securing the Scene
+- Seal the perimeter. No unauthorised person enters or leaves.
+- Do NOT power off any running computer. Volatile data will be lost.
+- Photograph the entire room before touching anything. Capture: screen contents, device positions, cables, physical condition of each device.
+- Record which devices are on and which are off. Enter this in the scene log.
+
+Phase 3: Documenting Devices
+- Label every device with a unique evidence number (E001, E002, etc.).
+- Record: device type, brand, model, serial number, physical condition, exact location in the room.
+- For mobile phones: enable airplane mode immediately to prevent remote wipe. Then place in a Faraday bag to block all wireless signals.
+- Do not connect any device to a USB port or network before attaching a write-blocker.
+
+Phase 4: Evidence Acquisition
+- Attach hardware write-blocker.
+- Create forensic image with dd.
+- Hash the image immediately.
+- Record hash value in the chain of custody form.
+- Package the original device in an anti-static evidence bag. Seal and sign it.
+
+```bash
+Forensic imaging
+dd if=/dev/sda of=/mnt/backup/evidence_E001.dd bs=4M conv=noerror,sync
+
+Hash verification (run both)
+md5sum /mnt/backup/evidence_E001.dd
+sha256sum /mnt/backup/evidence_E001.dd
+
+Save hashes to file
+md5sum /mnt/backup/evidence_E001.dd > evidence_E001.md5
+sha256sum /mnt/backup/evidence_E001.dd > evidence_E001.sha256
+```
+
+Phase 5: Chain of Custody
+Every handover of evidence must be recorded:
+- Evidence number, item description
+- Name and designation of person releasing custody
+- Name and designation of person receiving custody
+- Date, time, location of transfer
+- Reason for transfer
+- Signature of both parties
+
+Phase 6: Tax Evasion / Money Laundering Specific
+- Priority targets: financial spreadsheets, Tally/QuickBooks database files, PDF invoices, email archives, browser history (online banking).
+- Check for: hidden partitions, encrypted containers (VeraCrypt volumes appear as featureless large files), cloud sync folders (Google Drive, Dropbox).
+- Examine: deleted files, recycle bin, Windows shadow copies (VSS), recent documents list, USB device connection history (registry).
+- Goal: recover transaction logs, match timestamps of financial transfers with communication records.
+
+##Chain of Custody Table (draw this on paper)
+
+| Field | Entry |
+|---|---|
+| Evidence No. | E001 |
+| Item Description | Seagate HDD, 1TB, Serial: ST1000DM003 |
+| Collected by | [Name, Designation] |
+| Collection date/time | 31-Jul-2026 / 09:45 AM |
+| Location collected from | Office of accused, Desk 3, 2nd floor |
+| Current location | Forensic lab, Evidence locker 4 |
+| Hash (MD5) | 5f4dcc3b5aa765d61d8327deb882cf99 |
+| Hash (SHA256) | [value] |
+| Remarks | Device was powered off at time of collection |
+
+##Key Concepts
+- Anti-static bag: Prevents electrostatic discharge from damaging the storage device and corrupting evidence.
+- Faraday bag: Blocks all radio signals (WiFi, 4G, Bluetooth). Used for phones to prevent remote wipe commands.
+- Write-blocker: Allows read access only. Any write attempt is blocked at the hardware level.
+- Admissibility: Evidence is admissible if it is authentic, unaltered, lawfully collected, and properly documented throughout.
+
+##Viva
+- Q: What do you do if you find an encrypted hard drive? A: Do not attempt to decrypt at the scene. Image it as-is. Look for the key in RAM if the system is running. Seek legal compulsion on the suspect to provide the decryption key.
+- Q: Why use both MD5 and SHA256? A: MD5 is fast and widely used for quick comparison. SHA256 is cryptographically stronger. Using both ensures integrity even if one algorithm is later challenged in court.
+- Q: What is the risk of powering off a running laptop before imaging? A: Full-disk encryption (BitLocker, VeraCrypt) may be active. Powering off locks the drive. The image becomes unreadable without the key, which was in RAM.
+
+---
+
+#Q5: WHATSAPP DELETED CHAT RECOVERY
+
+##Definition
+WhatsApp chat recovery is the process of extracting, decrypting, and recovering deleted or archived messages from the WhatsApp SQLite database on an Android device as part of a forensic investigation.
+
+##Steps
+1. Connect Android phone via USB. Enable USB Debugging (Settings > Developer Options > USB Debugging).
+2. Verify ADB sees the device.
+3. Pull the WhatsApp Databases directory from the phone's SD card storage.
+4. This gives you the encrypted database file (msgstore.db.crypt14) and any dated backup files.
+5. Pull the encryption key from internal storage (requires root access or backup extraction).
+6. Decrypt the database using the key.
+7. Open the decrypted database in DB Browser for SQLite.
+8. Query the messages table. For deleted messages, check older dated backup files and query for NULL or empty data fields.
+
+##Commands
+```bash
+Verify ADB connection
+adb devices
+Should show your device serial number with status "device"
+
+Pull WhatsApp database directory from SD card (no root needed)
+adb pull /sdcard/WhatsApp/Databases/ ./wa_backup/
+This gives you: msgstore.db.crypt14 (current) and dated backups
+
+List all backup files available
+ls -la ./wa_backup/
+msgstore.db.crypt14           (current, most recent)
+msgstore-2026-07-30.1.db.crypt14  (yesterday's backup - may contain deleted messages)
+
+Pull encryption key (requires root)
+adb pull /data/data/com.whatsapp/files/key ./wa_backup/key
+
+Non-root alternative: ADB backup method
+adb backup -noapk com.whatsapp -f whatsapp_backup.ab
+java -jar android-backup-extractor.jar whatsapp_backup.ab backup.tar
+tar xvf backup.tar
+Key and database will be inside the extracted folder
+
+Decrypt the database
+python wa_crypt_tools/decrypt14.py wa_backup/key wa_backup/msgstore.db.crypt14 wa_backup/msgstore.db
+
+Open in SQLite and query for deleted messages
+sqlite3 wa_backup/msgstore.db
+
+View all tables
+.tables
+
+Query recent messages (all)
+SELECT key_remote_jid, data, timestamp FROM messages ORDER BY timestamp DESC LIMIT 50;
+
+Recover deleted messages: deleted rows often show NULL in data field
+Check the older backup file for messages no longer in current database
+Decrypt the dated backup the same way, then compare:
+SELECT key_remote_jid, data, timestamp FROM messages
+WHERE data IS NULL OR data = '';
+
+Export to CSV for report
+.mode csv
+.output wa_messages_export.csv
+SELECT key_remote_jid, data, timestamp FROM messages ORDER BY timestamp;
+.quit
+```
+
+##How to Find Deleted Messages Specifically
+Deleted WhatsApp messages are not immediately overwritten on the device. Three places to look:
+
+1. Dated backup files on SD card (`msgstore-YYYY-MM-DD.1.db.crypt14`). These are daily backups. A message deleted today may still exist in yesterday's backup. Decrypt and compare.
+2. NULL data rows in the current database. When a message is deleted, WhatsApp may leave the row but clear the content. Query for `WHERE data IS NULL`.
+3. File carving on the raw image. If the database file itself has been deleted or the device wiped, run Foremost or Autopsy on the full device image to recover SQLite database fragments.
+
+##WhatsApp Database Structure
+
+| Table | Contains |
+|---|---|
+| messages | All messages: sender, content, timestamp, media reference |
+| chat_list | All active and archived chats |
+| media_refs | References to media files (images, videos, documents) |
+| receipts | Read and delivered receipt data |
+| jid | Contact identifier in format 91XXXXXXXXXX@s.whatsapp.net |
+
+##Key Concepts
+- crypt14: Encryption format for WhatsApp local backups. The key file at `/data/data/com.whatsapp/files/key` is required to decrypt it. Key access needs root.
+- ADB: Android Debug Bridge. Command-line tool for communicating with Android devices. Part of Android SDK Platform Tools.
+- JID: Jabber ID. WhatsApp's contact identifier. Format: `CountryCode+PhoneNumber@s.whatsapp.net`.
+- Timestamp format: Unix epoch (seconds since 1 Jan 1970). Convert with: `date -d @<timestamp>` or use an online converter.
+
+##Viva
+- Q: What if the phone is locked and USB debugging is not enabled? A: JTAG forensics or chip-off acquisition. These are physical methods requiring specialist hardware. The device must be physically disassembled.
+- Q: Are WhatsApp messages encrypted in the local backup? A: Yes, with crypt14 encryption. The key is stored separately on the device and is needed for decryption. Without the key, the database file is unreadable.
+- Q: Why check older backup files for deleted messages? A: WhatsApp creates daily local backups. A message deleted from the current database may still exist in a backup from before the deletion date.
+- Q: Can WhatsApp chats be recovered after a factory reset? A: Only if the Google Drive backup is available (requires legal process to obtain) or if the storage chip was not securely wiped (file carving may recover fragments).
+
+---
